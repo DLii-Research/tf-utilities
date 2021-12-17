@@ -1,0 +1,31 @@
+import tensorflow as tf
+
+def device_id(device):
+    return ':'.join(device.name.split(':')[-2:])
+
+def find_devices(dev_type: str, indices: list=None):
+    dev_type = dev_type.upper()
+    indices = [indices] if type(indices) == int else indices
+    assert dev_type in ("GPU", "CPU")
+    devices = tf.config.get_visible_devices(dev_type)
+    if indices is not None:
+        devices = [devices[i] for i in indices]
+    assert len(devices) > 0, f"Could not find specified {dev_type}s"
+    return devices
+
+def create_strategy(devices):
+    ids = [device_id(device) for device in devices]
+    if len(devices) == 1:
+        return tf.distribute.OneDeviceStrategy(ids[0])
+    return tf.distribute.MirroredStrategy(ids)
+
+def cpu(index: int=0):
+    cpus = find_devices("CPU", index)
+    tf.config.set_visible_devices(cpus)
+    return create_strategy(cpus)
+
+def gpu(indices: int=None, cpu_index=0):
+    cpus = find_devices("CPU", cpu_index)
+    gpus = find_devices("GPU", indices)
+    tf.config.set_visible_devices(cpus + gpus)
+    return create_strategy(gpus)
