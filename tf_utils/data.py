@@ -22,11 +22,6 @@ class MultiprocessDataGenerator:
         self.buffered_batches = []
         
     # To Override ----------------------------------------------------------------------------------
-        
-    @staticmethod
-    def generate_batch(data, batch_size, config):
-        raise NotImplementedError("Must implement batch generation")
-
 
     def data_signature(self):
         """
@@ -37,6 +32,21 @@ class MultiprocessDataGenerator:
 
     def load_data(self):
         return None
+    
+    
+    @staticmethod
+    def generate_batch(data, batch_size, config, global_config):
+        raise NotImplementedError("Must implement batch generation")
+    
+    
+    @staticmethod
+    def worker_init(config, global_config):
+        pass
+    
+    
+    @staticmethod
+    def worker_clean(config, global_config):
+        print("Nothing to clean.")
 
     # Internal Processing --------------------------------------------------------------------------
     
@@ -98,18 +108,25 @@ class MultiprocessDataGenerator:
             
             
     @staticmethod
-    def worker(is_running, buffered_batches, stale_batches, ready_batches, batch_size, data, config, generate_batch):
-        while is_running.value and os.getppid() != 1:
-            try:
-                batch_id = stale_batches.get(timeout=1.0)
-                for i, batch in enumerate(generate_batch(data, batch_size, config)):
-                    for j, subbatch in enumerate(batch):
-                        buffered_batches[j][batch_id][i] = subbatch
-                ready_batches.put(batch_id)
-            except queue.Empty:
-                continue
-            except KeyboardInterrupt:
-                continue
+    def worker(worker_id, is_running, buffered_batches, stale_batches, ready_batches, batch_size, data, global_config, init, clean, generate_batch):
+        config = {"id": worker_id}
+        init(config, global_config)
+        try:
+            while is_running.value and os.getppid() != 1:
+                try:
+                    batch_id = stale_batches.get(timeout=1.0)
+                    for i, subbatch in enumerate(generate_batch(data, batch_size, config, global_config)):
+                        buffered_batches[i][batch_id] = subbatch
+                    ready_batches.put(batch_id)
+                except queue.Empty:
+                    continue
+                except KeyboardInterrupt:
+                    continue
+        except Exception as e:
+            clean(config, global_config)
+            raise e
+        clean(config, global_config)
+        
         
     # Interface ------------------------------------------------------------------------------------
     
@@ -129,10 +146,12 @@ class MultiprocessDataGenerator:
             self.batch_size,
             self.data,
             self.config,
+            self.__class__.worker_init,
+            self.__class__.worker_clean,
             self.__class__.generate_batch)
         self.__is_running.value = True
-        for _ in range(self.num_workers):
-            worker = Process(target=MultiprocessDataGenerator.worker, args=args)
+        for i in range(self.num_workers):
+            worker = Process(target=MultiprocessDataGenerator.worker, args=(i,) + args)
             worker.start()
             self.__workers.append(worker)
 
