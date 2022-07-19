@@ -1,5 +1,5 @@
 import tensorflow as tf
-import . devices
+from . import devices
 
 def create_strategy(devices):
     ids = [device_id(device) for device in devices]

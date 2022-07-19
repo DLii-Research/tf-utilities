@@ -1,4 +1,4 @@
-import tensorflow as tfp
+import tensorflow as tf
 
 def device_id(device):
     return ':'.join(device.name.split(':')[-2:])
@@ -22,4 +22,4 @@ def select_gpu(indices: int=None, cpu_index=0):
     cpus = find_devices("CPU", cpu_index)
     gpus = find_devices("GPU", indices)
     tf.config.set_visible_devices(cpus + gpus)
-    return gpus
+    return cpus + gpus
