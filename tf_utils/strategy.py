@@ -12,5 +12,5 @@ def cpu(index: int=0):
     return create_strategy(cpus)
 
 def gpu(indices: int=None, cpu_index=0, use_dynamic_memory=False):
-    gpus = devices.select_gpu(index)
+    gpus = devices.select_gpu(indices, cpu_index, use_dynamic_memory)
     return create_strategy(gpus)
