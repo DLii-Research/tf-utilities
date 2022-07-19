@@ -11,7 +11,6 @@ def cpu(index: int=0):
     cpus = devices.select_cpu(index)
     return create_strategy(cpus)
 
-def gpu(indices: int=None, cpu_index=0):
+def gpu(indices: int=None, cpu_index=0, use_dynamic_memory=False):
     gpus = devices.select_gpu(index)
-    tf.config.set_visible_devices(gpus)
     return create_strategy(gpus)
