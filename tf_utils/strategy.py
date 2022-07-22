@@ -1,9 +1,9 @@
 import tensorflow as tf
 from . import devices
 
-def create_strategy(devices):
-    ids = [device_id(device) for device in devices]
-    if len(devices) == 1:
+def create_strategy(device_list):
+    ids = [devices.device_id(device) for device in device_list]
+    if len(device_list) == 1:
         return tf.distribute.OneDeviceStrategy(ids[0])
     return tf.distribute.MirroredStrategy(ids)
 
