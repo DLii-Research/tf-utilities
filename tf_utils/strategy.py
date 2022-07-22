@@ -1,10 +1,10 @@
 import tensorflow as tf
 from . import devices
 
-def create_strategy(device_list):
-    ids = [devices.device_id(device) for device in device_list]
-    if len(device_list) == 1:
-        return tf.distribute.OneDeviceStrategy(ids[0])
+def create_strategy(cpus=[], gpus=[]):
+    ids = [devices.device_id(device) for device in cpus + gpus]
+    if len(gpus) < 2:
+        return tf.distribute.OneDeviceStrategy(ids[-1])
     return tf.distribute.MirroredStrategy(ids)
 
 def cpu(index: int=0):
@@ -12,5 +12,5 @@ def cpu(index: int=0):
     return create_strategy(cpus)
 
 def gpu(indices: int=None, cpu_index=0, use_dynamic_memory=False):
-    gpus = devices.select_gpu(indices, cpu_index, use_dynamic_memory)
-    return create_strategy(gpus)
+    cpus, gpus = devices.select_gpu(indices, cpu_index, use_dynamic_memory)
+    return create_strategy(cpus, gpus)

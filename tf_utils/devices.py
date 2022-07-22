@@ -25,4 +25,4 @@ def select_gpu(indices: int=None, cpu_index=0, use_dynamic_memory=False):
     if use_dynamic_memory:
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
-    return cpus + gpus
+    return cpus, gpus
