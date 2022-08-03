@@ -6,7 +6,7 @@ import os
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras as keras
-from . import utils as tfu_utils, strategy as tfu_stratgy
+from . import utils as tfu_utils, strategy as tfu_strategy
 import sys
 
 # A session object for variable reference
