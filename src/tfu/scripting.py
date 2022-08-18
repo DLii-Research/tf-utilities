@@ -1,6 +1,5 @@
 import argparse
 import pickle
-import dotenv
 import datetime
 import os
 import numpy as np
@@ -104,7 +103,7 @@ def __init_wandb(job_config, config):
     __session["is_resumed"] = bool(job_config.resume)
     if not hasattr(job_config, "wandb_project"):
         return None
-    if tfu_utils.str_to_bool(os.environ["WANDB_DISABLED"]):
+    if "WANDB_DISABLED" in os.environ and tfu_utils.str_to_bool(os.environ["WANDB_DISABLED"]):
         print("WARNING: Weights and Biases is currently disabled in the environment.")
         return None
 
@@ -126,9 +125,8 @@ def __init_wandb(job_config, config):
         resume=bool(job_config.resume))
 
 
-def boot(job, argv):
-    dotenv.load_dotenv()
-    return job(argv) or 0
+def boot(job, *args, **kwargs):
+    return job(*args, **kwargs) or 0
 
 
 def configure(argv, arg_defs):
@@ -138,7 +136,10 @@ def configure(argv, arg_defs):
     return builder.parse(argv)
 
 
-def init(argv, arg_defs):
+def init(arg_defs, argv=sys.argv[1:]):
+    """
+    Initialize a new job
+    """
     # Parse the configuration
     job_config, config = configure(argv, [arg_defs])
 
@@ -152,6 +153,9 @@ def init(argv, arg_defs):
 
 @tfu_utils.static_vars(instance=None)
 def strategy(config):
+    """
+    Fetch a strategy instance for the corresponding config
+    """
     if strategy.instance is None:
         if config.gpus is None:
             print("Using CPU Strategy")
@@ -178,7 +182,7 @@ def artifact(config, key):
         artifact = wandb_api().artifact(name)
 
     path = None
-    if os.environ["WANDB_ARTIFACTS_PATH"] is not None:
+    if "WANDB_ARTIFACTS_PATH" in os.environ and os.environ["WANDB_ARTIFACTS_PATH"] is not None:
         path = os.path.join(os.environ["WANDB_ARTIFACTS_PATH"], name)
     return artifact.download(path)
 
