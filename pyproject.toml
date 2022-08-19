@@ -3,12 +3,12 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tfu"
+name = "tf-utilities"
 version = "0.1.0"
 authors = [
   { name="David Ludwig", email="davidludwigii@gmail.com" },
 ]
-description = "A small library of utilities for TensorFlow 2/Keras."
+description = "A light-weight library of utilities for TensorFlow 2/Keras."
 readme = "README.md"
 license = { file="LICENSE" }
 requires-python = ">=3.7"
@@ -19,5 +19,5 @@ classifiers = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/DLii-Research/tf-utils"
-"Bug Tracker" = "https://github.com/DLii-Research/tf-utils/issues"
+"Homepage" = "https://github.com/DLii-Research/tf-utilities"
+"Bug Tracker" = "https://github.com/DLii-Research/tf-utilities/issues"
