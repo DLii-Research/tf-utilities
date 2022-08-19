@@ -1,6 +1,6 @@
 import tensorflow.keras as keras
-import tfu
-import tfu.scripting as ts
+import tf_utilities as tfu
+import tf_utilities.scripting as ts
 import sys
 
 
