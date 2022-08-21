@@ -41,7 +41,7 @@ def define_arguments(cli):
     # * [--run-eagerly]        - enable eager execution
     # * [--use-dynamic-memory] - dynamic memory allocation
     # Specified arguments will serve as the defaults
-    cli.use_training(epochs=20, batch_size=32)
+    cli.use_training(epochs=5, batch_size=32)
 
     # Include an optional seed argument
     cli.argument("--seed", type=int, default=None)
@@ -158,9 +158,7 @@ def train(config, model_path):
 
         # Save the model
         if config.save_to:
-            ts.save_model(model, ts.path_to(config.save_to))
-
-    return model
+            model.save(ts.path_to(config.save_to))
 
 
 def main():

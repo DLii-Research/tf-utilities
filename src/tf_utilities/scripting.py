@@ -95,41 +95,19 @@ class CliArgumentFactory:
         for key in to_remove:
             delattr(config, key)
 
-
-def __init_wandb(job_config, config):
-    """
-    Initialize the W&B instance
-    """
-    __session["is_resumed"] = bool(job_config.resume)
-    if not hasattr(job_config, "wandb_project"):
-        return None
-    if "WANDB_DISABLED" in os.environ and tfu_utils.str_to_bool(os.environ["WANDB_DISABLED"]):
-        print("WARNING: Weights and Biases is currently disabled in the environment.")
-        return None
-
-    import wandb
-
-    # Run-resume
-    if hasattr(job_config, "wandb_job_id") and job_config.wandb_job_id is not None:
-        job_id = job_config.resume
-    else:
-        job_id = wandb.util.generate_id()
-
-    __session["run"] = wandb.init(
-        id=job_id,
-        project=job_config.wandb_project,
-        name=job_config.wandb_name,
-        group=job_config.wandb_group,
-        mode=job_config.wandb_mode,
-        config=config,
-        resume=bool(job_config.resume))
-
+# Scripting Interface ------------------------------------------------------------------------------
 
 def boot(job, *args, **kwargs):
+    """
+    Boot a job.
+    """
     return job(*args, **kwargs) or 0
 
 
 def configure(argv, arg_defs):
+    """
+    Parse the provided arguments to obtain the job configuration.
+    """
     builder = CliArgumentFactory()
     for arg_def in arg_defs:
         arg_def(builder)
@@ -138,7 +116,7 @@ def configure(argv, arg_defs):
 
 def init(arg_defs, argv=sys.argv[1:]):
     """
-    Initialize a new job
+    Initialize a new job.
     """
     # Parse the configuration
     job_config, config = configure(argv, [arg_defs])
@@ -150,11 +128,12 @@ def init(arg_defs, argv=sys.argv[1:]):
     config.__dict__.update(job_config.__dict__)
     return config
 
+# Scripting Utilities ------------------------------------------------------------------------------
 
 @tfu_utils.static_vars(instance=None)
 def strategy(config):
     """
-    Fetch a strategy instance for the corresponding config
+    Fetch a strategy instance for the corresponding config.
     """
     if strategy.instance is None:
         if config.gpus is None:
@@ -187,9 +166,133 @@ def artifact(config, key):
     return artifact.download(path)
 
 
+def initial_epoch(config):
+    """
+    Get the initial epoch for the run.
+    """
+    if not is_using_wandb():
+        return config.initial_epoch
+    run = __session
+    if config.initial_epoch > 0 and wandb_run().step != config.initial_epoch:
+        print("WARNING: Supplied initial epoch will be ignored while using W&B.")
+    return wandb_run().step
+
+
+def is_resumed():
+    """
+    Determine if this is a resumed job.
+    """
+    return __session["is_resumed"]
+
+
+def restore(name, run_path=None, replace=False, root=None):
+    """
+    Restore the specified file from a previous run.
+    """
+    if not is_using_wandb():
+        return name
+    import wandb
+    return wandb.restore(name, run_path, replace, root)
+
+
+def restore_dir(name, run_path=None, replace=False, root=None):
+    """
+    Restore (recursively) a the given directory from a previous run.
+    """
+    if not is_using_wandb():
+        return name
+    run_path = run_path if run_path is not None else wandb_run().path
+    run = wandb_api().run(run_path)
+    for f in filter(lambda f: f.name.startswith(name), run.files()):
+        return wandb.restore(name, run_path, replace, root)
+    return os.path.join(wandb_run().dir, name)
+
+
+def run_safely(fn, *args, **kwargs):
+    """
+    Run a function with keyboard interrupt protection.
+    """
+    try:
+        return fn(*args, **kwargs)
+    except KeyboardInterrupt:
+        return None
+
+
+def cwd():
+    """
+    Get the current working directory. If W&B is enabled, this is the current run directory.
+    """
+    if not is_using_wandb():
+        return os.getcwd()
+    return wandb_run().dir
+
+
+def path_to(paths):
+    """
+    Prefix the given paths with the current run directory.
+    This should be used for all run-specific writes performed in a job.
+    """
+    if type(paths) is str:
+        return os.path.join(cwd(), paths)
+    d = cwd()
+    return [os.path.join(d, p) for p in paths]
+
+
+def random_seed(seed):
+    """
+    Set the random seed for Python, numpy, and Tensorflow.
+    """
+    if seed is None:
+        return
+    __session["seed"] = seed
+    __session["next_seed"] = seed
+    keras.utils.set_random_seed(seed)
+
+
+def rng():
+    """
+    Fetch a new numpy RNG instance.
+    """
+    seed = None
+    if "seed" in __session:
+        __session["next_seed"] += 1
+        seed = __session["next_seed"]
+    return np.random.default_rng(seed)
+
+
+# Weights and Biases  ------------------------------------------------------------------------------
+
+def __init_wandb(job_config, config):
+    """
+    Initialize the W&B instance.
+    """
+    __session["is_resumed"] = bool(job_config.resume)
+    if not hasattr(job_config, "wandb_project"):
+        return None
+    if "WANDB_DISABLED" in os.environ and tfu_utils.str_to_bool(os.environ["WANDB_DISABLED"]):
+        print("WARNING: Weights and Biases is currently disabled in the environment.")
+        return None
+
+    import wandb
+
+    # Run-resume
+    if hasattr(job_config, "wandb_job_id") and job_config.wandb_job_id is not None:
+        job_id = job_config.resume
+    else:
+        job_id = wandb.util.generate_id()
+
+    __session["run"] = wandb.init(
+        id=job_id,
+        project=job_config.wandb_project,
+        name=job_config.wandb_name,
+        group=job_config.wandb_group,
+        mode=job_config.wandb_mode,
+        config=config,
+        resume=bool(job_config.resume))
+
 def log_artifact(name, paths, type, description=None, metadata=None, incremental=None, use_as=None):
     """
-    Log an artifact to W&B
+    Log an artifact to W&B.
     """
     if not is_using_wandb():
         return
@@ -208,119 +311,44 @@ def log_artifact(name, paths, type, description=None, metadata=None, incremental
     wandb.log_artifact(artifact)
 
 
-def restore(name, run_path=None, replace=False, root=None):
+def is_using_wandb():
     """
-    Restore the specified file from a previous run
+    Determine if W&B is being used for this job.
     """
-    if not is_using_wandb():
-        return name
-    import wandb
-    return wandb.restore(name, run_path, replace, root)
+    return "run" in __session
 
 
-def restore_dir(name, run_path=None, replace=False, root=None):
+def is_wandb_disabled():
     """
-    Restore (recursively) a the given directory from a previous run
+    Determine if W&B is disabled for this job.
     """
     if not is_using_wandb():
-        return name
-    run_path = run_path if run_path is not None else wandb_run().path
-    run = wandb_api().run(run_path)
-    for f in filter(lambda f: f.name.startswith(name), run.files()):
-        return wandb.restore(name, run_path, replace, root)
-    return os.path.join(wandb_run().dir, name)
-
-
-def save_model(model, path):
-    """
-    Save a model. If using W&B, the model is saved in the current run directory.
-    """
-    print(f"Saving model to: {path}")
-    model.save(path)
-    try:
-        model.save_weights(f"{path}.h5")
-    except Exception as e:
-        print("Failed to write weights to a file. Saving weights in a pickle file. Reason:")
-        print(e)
-        with open(f"{path}.data", "wb") as f:
-            pickle.dump(model.get_weights(), f)
-
-
-def run_safely(fn, *args, **kwargs):
-    """
-    Run a function with keyboard interrupt protection.
-    """
-    try:
-        return fn(*args, **kwargs)
-    except KeyboardInterrupt:
-        return None
-
-
-def cwd():
-    if not is_using_wandb():
-        return os.getcwd()
-    return wandb_run().dir
-
-
-def path_to(paths):
-    if type(paths) is str:
-        return os.path.join(cwd(), paths)
-    d = cwd()
-    return [os.path.join(d, p) for p in paths]
+        return True
+    return wandb_run().disabled
 
 
 @tfu_utils.static_vars(instance=None)
 def wandb_api():
+    """
+    Fetch a W&B public API instance.
+    """
     if wandb_api.instance is None:
         import wandb
         wandb_api.instance = wandb.Api()
     return wandb_api.instance
 
 
-def random_seed(seed):
-    if seed is None:
-        return
-    __session["seed"] = seed
-    __session["next_seed"] = seed
-    keras.utils.set_random_seed(seed)
-
-
-def rng():
-    seed = None
-    if "seed" in __session:
-        __session["next_seed"] += 1
-        seed = __session["next_seed"]
-    return np.random.default_rng(seed)
-
-
-def is_resumed():
-    return __session["is_resumed"]
-
-
-def is_using_wandb():
-    return "run" in __session
-
-
-def is_wandb_disabled():
-    if not is_using_wandb():
-        return True
-    return wandb_run().disabled
-
-
 def wandb_run():
+    """
+    Get the current W&B run instance.
+    """
     return __session["run"]
 
 
-def initial_epoch(config):
-    if not is_using_wandb():
-        return config.initial_epoch
-    run = __session
-    if config.initial_epoch > 0 and wandb_run().step != config.initial_epoch:
-        print("WARNING: Supplied initial epoch will be ignored while using W&B.")
-    return wandb_run().step
-
-
 def wandb_callback(*args, **kwargs):
+    """
+    Create a WandbCallback instance with the provided arguments if W&B is being used.
+    """
     if not is_using_wandb():
         return None
     import wandb
