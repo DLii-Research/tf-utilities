@@ -114,12 +114,17 @@ def configure(argv, arg_defs):
     return builder.parse(argv)
 
 
-def init(arg_defs, argv=sys.argv[1:]):
+def init(arg_defs=None, argv=sys.argv[1:]):
     """
     Initialize a new job.
     """
+    if arg_defs is None:
+        arg_defs = []
+    elif type(arg_defs) not in (tuple, list):
+        arg_defs = [arg_defs]
+
     # Parse the configuration
-    job_config, config = configure(argv, [arg_defs])
+    job_config, config = configure(argv, arg_defs)
 
     # Create the W&B instance
     __init_wandb(job_config, config)
@@ -149,6 +154,7 @@ def artifact(config, key):
     """
     Fetch the path to an artifact from the config.
     """
+    key = key.replace('-', '_')
     path = getattr(config, f"{key}_path")
     if path is not None:
         return path
