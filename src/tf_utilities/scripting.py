@@ -17,7 +17,6 @@ class CliArgumentFactory:
     def __init__(self, description=None):
         self.parser = argparse.ArgumentParser(description=description)
         self.job_args = []
-        self.use_wandb()
 
     def argument(self, *args, **kwargs):
         return self.parser.add_argument(*args, **kwargs)
@@ -51,6 +50,9 @@ class CliArgumentFactory:
         self.job_argument("--wandb-mode", type=str, choices=["online", "offline", "disabled"], default="online")
         if allow_resume:
             self.job_argument("--resume", type=str, default=None, help="W&B Job ID of existing run")
+
+    def use_rng(self):
+        self.argument("--seed", type=int, default=None, required=False, help="Random seed")
 
     def parse(self, argv):
         config = self.parser.parse_args(argv)
@@ -114,7 +116,7 @@ def configure(argv, arg_defs):
     return builder.parse(argv)
 
 
-def init(arg_defs=None, argv=sys.argv[1:]):
+def init(arg_defs=None, argv=sys.argv[1:], use_wandb=True):
     """
     Initialize a new job.
     """
@@ -126,8 +128,11 @@ def init(arg_defs=None, argv=sys.argv[1:]):
     # Parse the configuration
     job_config, config = configure(argv, arg_defs)
 
+    if hasattr(config, "seed"):
+        random_seed(config.seed)
+
     # Create the W&B instance
-    __init_wandb(job_config, config)
+    __init_wandb(job_config, config, use_wandb)
 
     # Merge the configs
     config.__dict__.update(job_config.__dict__)
@@ -268,10 +273,12 @@ def rng():
 
 # Weights and Biases  ------------------------------------------------------------------------------
 
-def __init_wandb(job_config, config):
+def __init_wandb(job_config, config, use_wandb=True):
     """
     Initialize the W&B instance.
     """
+    if not use_wandb:
+        return None
     __session["is_resumed"] = bool(job_config.resume)
     if not hasattr(job_config, "wandb_project"):
         return None
