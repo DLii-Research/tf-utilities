@@ -61,7 +61,7 @@ class CliArgumentFactory:
         # If a run ID was specified explicitly, we should only
         # keep the CLI arguments that were supplied explicitly
         # as all other values should default to the previous run.
-        if hasattr(job_config, "wandb_job_id") and job_config.wandb_job_id is not None:
+        if hasattr(job_config, "resume") and job_config.resume is not None:
             supplied_args = self.__supplied_cli_args(argv, config)
             self.__remove_defaults_from_config(config, supplied_args)
         return job_config, config
@@ -289,7 +289,7 @@ def __init_wandb(job_config, config, use_wandb=True):
     import wandb
 
     # Run-resume
-    if hasattr(job_config, "wandb_job_id") and job_config.wandb_job_id is not None:
+    if hasattr(job_config, "resume") and job_config.resume is not None:
         job_id = job_config.resume
     else:
         job_id = wandb.util.generate_id()
