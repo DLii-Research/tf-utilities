@@ -215,7 +215,7 @@ def restore_dir(name, run_path=None, replace=False, root=None):
     run_path = run_path if run_path is not None else wandb_run().path
     run = wandb_api().run(run_path)
     for f in filter(lambda f: f.name.startswith(name), run.files()):
-        return wandb.restore(name, run_path, replace, root)
+        return restore(name, run_path, replace, root)
     return os.path.join(wandb_run().dir, name)
 
 
@@ -279,7 +279,7 @@ def __init_wandb(job_config, config, use_wandb=True):
     """
     if not use_wandb:
         return None
-    __session["is_resumed"] = bool(job_config.resume)
+    __session["is_resumed"] = job_config.resume is not None
     if not hasattr(job_config, "wandb_project"):
         return None
     if "WANDB_DISABLED" in os.environ and tfu_utils.str_to_bool(os.environ["WANDB_DISABLED"]):
