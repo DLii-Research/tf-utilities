@@ -1,7 +1,7 @@
 import argparse
 import os
 import numpy as np
-from . import utils as tfu_utils, strategy as tfu_strategy
+from . import utils as tfu_utils
 import sys
 
 # A session object for variable reference
@@ -143,6 +143,9 @@ def strategy(config):
     """
     Fetch a strategy instance for the corresponding config.
     """
+    if not __session["use_tensorflow"]:
+        return None
+    from . import strategy as tfu_strategy
     if strategy.instance is None:
         if config.gpus is None:
             print("Using CPU Strategy")
