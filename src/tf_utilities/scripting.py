@@ -1,10 +1,6 @@
 import argparse
-import pickle
-import datetime
 import os
 import numpy as np
-import tensorflow as tf
-import tensorflow.keras as keras
 from . import utils as tfu_utils, strategy as tfu_strategy
 import sys
 
@@ -116,7 +112,7 @@ def configure(argv, arg_defs):
     return builder.parse(argv)
 
 
-def init(arg_defs=None, argv=sys.argv[1:], use_wandb=True):
+def init(arg_defs=None, argv=sys.argv[1:], use_wandb=True, use_tensorflow=True):
     """
     Initialize a new job.
     """
@@ -130,6 +126,8 @@ def init(arg_defs=None, argv=sys.argv[1:], use_wandb=True):
 
     if hasattr(config, "seed"):
         random_seed(config.seed)
+
+    __session["use_tensorflow"] = use_tensorflow
 
     # Create the W&B instance
     __init_wandb(job_config, config, use_wandb)
@@ -257,7 +255,9 @@ def random_seed(seed):
         return
     __session["seed"] = seed
     __session["next_seed"] = seed
-    keras.utils.set_random_seed(seed)
+    if __session["use_tensorflow"]:
+        import tensorflow as tf
+        tf.keras.utils.set_random_seed(seed)
 
 
 def rng():
