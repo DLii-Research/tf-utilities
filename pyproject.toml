@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tf-utilities"
-version = "0.1.6"
+version = "0.1.7"
 authors = [
   { name="David Ludwig", email="davidludwigii@gmail.com" },
 ]
@@ -13,9 +13,12 @@ readme = "README.md"
 license = { file="LICENSE" }
 requires-python = ">=3.7"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+dependencies = [
+    "lmdbm-lockable >= 0.0.5"
 ]
 
 [project.urls]
