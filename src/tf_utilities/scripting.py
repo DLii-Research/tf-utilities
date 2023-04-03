@@ -361,11 +361,13 @@ def wandb_run():
     return __session["run"]
 
 
-def wandb_callback(*args, **kwargs):
+def wandb_callback(*args, save_model_as_artifact=False, **kwargs):
     """
     Create a WandbCallback instance with the provided arguments if W&B is being used.
     """
     if not is_using_wandb():
         return None
     import wandb
-    return wandb.keras.WandbCallback(*args, **kwargs)
+    callback = wandb.keras.WandbCallback(*args, **kwargs)
+    callback.save_model_as_artifact = save_model_as_artifact
+    return callback
