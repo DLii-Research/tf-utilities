@@ -1,8 +1,9 @@
 import argparse
 import os
 import numpy as np
-from . import utils as tfu_utils
 import sys
+import tensorflow as tf
+from . import utils as tfu_utils
 
 # A session object for variable reference
 __session = {}
@@ -112,7 +113,7 @@ def configure(argv, arg_defs):
     return builder.parse(argv)
 
 
-def init(arg_defs=None, argv=sys.argv[1:], use_wandb=True, use_tensorflow=True):
+def init(arg_defs=None, argv=sys.argv[1:], use_wandb=True):
     """
     Initialize a new job.
     """
@@ -126,8 +127,6 @@ def init(arg_defs=None, argv=sys.argv[1:], use_wandb=True, use_tensorflow=True):
 
     if hasattr(config, "seed"):
         random_seed(config.seed)
-
-    __session["use_tensorflow"] = use_tensorflow
 
     # Create the W&B instance
     __init_wandb(job_config, config, use_wandb)
@@ -143,8 +142,6 @@ def strategy(config):
     """
     Fetch a strategy instance for the corresponding config.
     """
-    if not __session["use_tensorflow"]:
-        return None
     from . import strategy as tfu_strategy
     if strategy.instance is None:
         if config.gpus is None:
@@ -258,9 +255,7 @@ def random_seed(seed):
         return
     __session["seed"] = seed
     __session["next_seed"] = seed
-    if __session["use_tensorflow"]:
-        import tensorflow as tf
-        tf.keras.utils.set_random_seed(seed)
+    tf.keras.utils.set_random_seed(seed)
 
 
 def rng():
