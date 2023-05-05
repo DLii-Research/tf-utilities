@@ -5,7 +5,7 @@ def create_strategy(cpus=[], gpus=[]):
     ids = [devices.device_id(device) for device in cpus + gpus]
     if len(gpus) < 2:
         return tf.distribute.OneDeviceStrategy(ids[-1])
-    return tf.distribute.MirroredStrategy(ids)
+    return tf.distribute.MirroredStrategy(ids[len(cpus):])
 
 def cpu(index: int=0):
     cpus = devices.select_cpu(index)
